@@ -17,6 +17,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import redis.clients.jedis.Jedis;
 
 import java.util.List;
+import java.util.UUID;
 
 @Service
 public class SkuServiceImpl implements SkuService {
@@ -78,7 +79,9 @@ public class SkuServiceImpl implements SkuService {
     }
 
     @Override
-    public PmsSkuInfo getSkuById(String skuId) {
+    public PmsSkuInfo getSkuById(String skuId,String ip) {
+        System.out.println("ip为" + ip + "访问者，线程号：" + Thread.currentThread().getName() + "进入商品详情");
+
         PmsSkuInfo pmsSkuInfo = new PmsSkuInfo();
         Jedis jedis = null;
         try {
@@ -92,7 +95,9 @@ public class SkuServiceImpl implements SkuService {
             } else {
                 //如果缓存中没有，查询mysql
                 //设置分布式锁
-                String ok = jedis.set(skuKey, "1", "nx", "px", 10);
+                String token = UUID.randomUUID().toString();
+                String lockKey = "sku:" + skuId + ":lock";
+                String ok = jedis.set(lockKey, token, "nx", "px", 10 * 1000);
                 if(StringUtils.isNotBlank(ok) && "OK".equals(ok)) {
                     //设置成功，有权在10秒的过期时间内访问数据库
                     pmsSkuInfo = getSkuByIdFrom(skuId);
@@ -103,6 +108,15 @@ public class SkuServiceImpl implements SkuService {
                         //为了防止缓存空透，将null或者空字符串值设置给redis
                         jedis.setex(skuKey,60 * 3,"");
                     }
+
+                    //在访问mysql后释放锁
+                    String lockToken = jedis.get(lockKey);
+                   if(StringUtils.isNotBlank(lockToken) && lockToken.equals(token)) {
+//                        jedis.eval("lua");
+                        jedis.del(lockKey);
+                    }
+                   /*String luaScript = "if redis.call('get',KEYS[1])==ARGV[1] then return redis.call('del',KEYS[1]) else return 0 end";
+                   jedis.eval(luaScript, Collections.singletonList(lockKey),Collections.singletonList(lockToken));*/
                 } else {
                     //设置失败,自旋
                     try {
@@ -110,7 +124,7 @@ public class SkuServiceImpl implements SkuService {
                     } catch (Exception e) {
                         e.printStackTrace();
                     }
-                    return getSkuById(skuId);
+                    return getSkuById(skuId,ip);
                 }
             }
         } finally {
@@ -125,5 +139,18 @@ public class SkuServiceImpl implements SkuService {
         return pmsSkuInfoList;
     }
 
+    @Override
+    public List<PmsSkuInfo> getAllSku(String catalog3Id) {
+        List<PmsSkuInfo> pmsSkuInfoList = pmsSkuInfoMapper.selectAll();
+        for (PmsSkuInfo pmsSkuInfo : pmsSkuInfoList) {
+            String skuId = pmsSkuInfo.getId();
 
+            PmsSkuAttrValue pmsSkuAttrValue = new PmsSkuAttrValue();
+            pmsSkuAttrValue.setSkuId(skuId);
+            List<PmsSkuAttrValue> pmsSkuAttrValueList = pmsSkuAttrValueMapper.select(pmsSkuAttrValue);
+
+            pmsSkuInfo.setSkuAttrValueList(pmsSkuAttrValueList);
+        }
+        return pmsSkuInfoList;
+    }
 }
