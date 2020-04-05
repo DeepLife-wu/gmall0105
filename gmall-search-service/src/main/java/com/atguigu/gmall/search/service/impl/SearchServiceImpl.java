@@ -13,6 +13,8 @@ import org.apache.commons.lang3.StringUtils;
 import org.elasticsearch.index.query.BoolQueryBuilder;
 import org.elasticsearch.index.query.MatchQueryBuilder;
 import org.elasticsearch.index.query.TermQueryBuilder;
+import org.elasticsearch.search.aggregations.AggregationBuilders;
+import org.elasticsearch.search.aggregations.bucket.terms.TermsBuilder;
 import org.elasticsearch.search.builder.SearchSourceBuilder;
 import org.elasticsearch.search.highlight.HighlightBuilder;
 import org.elasticsearch.search.sort.SortOrder;
@@ -61,7 +63,8 @@ public class SearchServiceImpl implements SearchService {
     }
 
     private String getSearchDsl(PmsSearchParam pmsSearchParam) {
-        List<PmsSkuAttrValue> skuAttrValueList = pmsSearchParam.getPmsSkuAttrValueList();
+//        List<PmsSkuAttrValue> skuAttrValueList = pmsSearchParam.getPmsSkuAttrValueList();
+        String[] skuAttrValueList = pmsSearchParam.getValueId();
         String keyworld = pmsSearchParam.getKeyword();
         String catalog3Id = pmsSearchParam.getCatalog3Id();
 
@@ -74,9 +77,13 @@ public class SearchServiceImpl implements SearchService {
             boolQueryBuilder.filter(termQueryBuilder);
         }
 
-        if(CollectionUtils.isNotEmpty(skuAttrValueList)) {
-            for (PmsSkuAttrValue pmsSkuAttrValue : skuAttrValueList) {
+        if(skuAttrValueList != null /*CollectionUtils.isNotEmpty(skuAttrValueList)*/) {
+            /*for (PmsSkuAttrValue pmsSkuAttrValue : skuAttrValueList) {
                 TermQueryBuilder termQueryBuilder = new TermQueryBuilder("skuAttrValueList.valueId",pmsSkuAttrValue.getValueId());
+                boolQueryBuilder.filter(termQueryBuilder);
+            }*/
+            for (String valueId : skuAttrValueList) {
+                TermQueryBuilder termQueryBuilder = new TermQueryBuilder("skuAttrValueList.valueId",valueId);
                 boolQueryBuilder.filter(termQueryBuilder);
             }
         }
@@ -97,6 +104,10 @@ public class SearchServiceImpl implements SearchService {
         searchSourceBuilder.sort("id",SortOrder.DESC);
         searchSourceBuilder.from(0);
         searchSourceBuilder.size(20);
+
+        /*//聚合
+        TermsBuilder groupByAttr = AggregationBuilders.terms("groupby_attr").field("skuAttrValueList.valueId");
+        searchSourceBuilder.aggregation(groupByAttr);*/
 
         return searchSourceBuilder.toString();
     }

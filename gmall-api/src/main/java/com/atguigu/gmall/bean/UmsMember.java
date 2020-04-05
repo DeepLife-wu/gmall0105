@@ -12,7 +12,7 @@ import java.util.Date;
 public class UmsMember implements Serializable {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+    private String id;
 
     private Long memberLevelId;
 
@@ -30,8 +30,6 @@ public class UmsMember implements Serializable {
 
     private String icon;
 
-    private Integer gender;
-
     private Date birthday;
 
     private String city;
@@ -40,8 +38,6 @@ public class UmsMember implements Serializable {
 
     private String personalizedSignature;
 
-    private Integer sourceType;
-
     private Integer integration;
 
     private Integer growth;
@@ -49,5 +45,12 @@ public class UmsMember implements Serializable {
     private Integer luckeyCount;
 
     private Integer historyIntegration;
+
+    private String sourceType;
+    private String gender;
+    private String sourceUid;
+    private String accessToken;
+    private String accessCode;
+
 
 }
