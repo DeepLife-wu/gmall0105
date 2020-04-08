@@ -52,7 +52,7 @@ public class UserServiceImpl implements UserService {
         Jedis jedis = redisUtil.getJedis();
         try {
             if(jedis != null) {
-                String umsMemberStr = jedis.get("user:" + umsMember.getPassword() + ":info");
+                String umsMemberStr = jedis.get("user:" +umsMember.getUsername() + ":" + umsMember.getPassword() + ":info");
                 if(StringUtils.isNotBlank(umsMemberStr)) {
                     //密码正确
                     UmsMember umsMemberFromCache = JSON.parseObject(umsMemberStr, UmsMember.class);
@@ -62,7 +62,7 @@ public class UserServiceImpl implements UserService {
             //密码错误
             UmsMember umsMemberFromDb = loginFromDb(umsMember);
             if(umsMemberFromDb != null) {
-                jedis.setex("user:" + umsMember.getPassword() + ":info",60 * 60 * 24,JSON.toJSONString(umsMemberFromDb));
+                jedis.setex("user:" + umsMember.getUsername() + ":" + umsMember.getPassword() + ":info",60 * 60 * 24,JSON.toJSONString(umsMemberFromDb));
             }
             return umsMemberFromDb;
         } catch (Exception e) {
@@ -90,8 +90,9 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
-    public void addOauthUser(UmsMember umsMember) {
+    public UmsMember addOauthUser(UmsMember umsMember) {
         umsMemberMapper.insertSelective(umsMember);
+        return umsMember;
     }
 
     @Override
@@ -100,4 +101,11 @@ public class UserServiceImpl implements UserService {
         return umsMember;
     }
 
+    @Override
+    public UmsMemberReceiveAddress getReceiveAddressById(String receiveAddressId) {
+        UmsMemberReceiveAddress umsMemberReceiveAddress = new UmsMemberReceiveAddress();
+        umsMemberReceiveAddress.setId(receiveAddressId);
+        UmsMemberReceiveAddress umsMemberReceiveAddress1 = umsMemberReceiveAddressMapper.selectOne(umsMemberReceiveAddress);
+        return umsMemberReceiveAddress1;
+    }
 }
