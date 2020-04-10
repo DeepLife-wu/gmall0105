@@ -2,6 +2,7 @@ package com.atguigu.gmall.order.service.impl;
 
 import com.alibaba.dubbo.config.annotation.Reference;
 import com.alibaba.dubbo.config.annotation.Service;
+import com.alibaba.fastjson.JSON;
 import com.atguigu.gmall.bean.OmsOrder;
 import com.atguigu.gmall.bean.OmsOrderItem;
 import com.atguigu.gmall.mq.ActiveMQUtil;
@@ -11,6 +12,7 @@ import com.atguigu.gmall.service.CartService;
 import com.atguigu.gmall.service.OrderService;
 import com.atguigu.gmall.util.RedisUtil;
 import org.apache.activemq.command.ActiveMQMapMessage;
+import org.apache.activemq.command.ActiveMQTextMessage;
 import org.springframework.beans.factory.annotation.Autowired;
 import redis.clients.jedis.Jedis;
 import tk.mybatis.mapper.entity.Example;
@@ -21,6 +23,7 @@ import javax.jms.MapMessage;
 import javax.jms.MessageProducer;
 import javax.jms.Queue;
 import javax.jms.Session;
+import javax.jms.TextMessage;
 import java.util.Collections;
 import java.util.List;
 import java.util.UUID;
@@ -114,11 +117,21 @@ public class OrderServiceImpl implements OrderService {
             session = connection.createSession(true, Session.SESSION_TRANSACTED);
             Queue payhment_success_queue = session.createQueue("ORDER_PAY_QUEUE");
             MessageProducer producer = session.createProducer(payhment_success_queue);
-            //TextMessage textMessage=new ActiveMQTextMessage();//字符串文本
-            MapMessage mapMessage = new ActiveMQMapMessage();// hash结构
+            TextMessage textMessage=new ActiveMQTextMessage();//字符串文本
+//            MapMessage mapMessage = new ActiveMQMapMessage();// hash结构
+
+            OmsOrder omsOrderParam = new OmsOrder();
+            omsOrderParam.setOrderSn(omsOrder.getOrderSn());
+            OmsOrder omsOrderResponse = omsOrderMapper.selectOne(omsOrderParam);
+            OmsOrderItem omsOrderItemParam = new OmsOrderItem();
+            omsOrderItemParam.setOrderSn(omsOrderResponse.getOrderSn());
+            List<OmsOrderItem> select = omsOrderItemMapper.select(omsOrderItemParam);
+            omsOrderResponse.setOmsOrderItems(select);
+
+            textMessage.setText(JSON.toJSONString(omsOrderResponse));
 
             omsOrderMapper.updateByExampleSelective(omsOrderUpdate,e);
-            producer.send(mapMessage);
+            producer.send(textMessage);
             session.commit();
         }catch (Exception ex){
             // 消息回滚

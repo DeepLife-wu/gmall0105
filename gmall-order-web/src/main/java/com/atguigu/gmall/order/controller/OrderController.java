@@ -81,7 +81,7 @@ public class OrderController {
             Date time = c.getTime();
             omsOrder.setReceiveTime(time);
             omsOrder.setSourceType(0);
-            omsOrder.setStatus(0);
+            omsOrder.setStatus("0");
             omsOrder.setTotalAmount(totalAmount);
 
             //根据用户id获得要购习的商品列表(购物车)
